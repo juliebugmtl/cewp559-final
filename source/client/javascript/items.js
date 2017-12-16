@@ -115,4 +115,6 @@ function createNewItem() {
             showCategories();
         });
     });
+
 }
+

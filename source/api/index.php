@@ -11,7 +11,7 @@ error_log('API is starting!');
  *  POST http://localhost/api/items/4/image
  * the following piece of code work as below:
  * 
- * $pathparts will be an arrya of : array('items', '1', 'image')
+ * $pathparts will be an array of : array('items', '1', 'image')
  * where:
  * items: is the `resource`
  * 1: is the `id`
@@ -35,10 +35,7 @@ $requestHeaders = getallheaders();
 $filters = $_GET;
 $hasFilters = !empty($_GET);
 
-
-//
 // Database Connection
-//
 $dbhost = $_ENV['RDS_HOSTNAME'];
 $dbport = $_ENV['RDS_PORT'];
 $dbname = $_ENV['RDS_DB_NAME'];
@@ -67,9 +64,6 @@ try {
     switch ($resource) {
         case 'items':
 
-        // $userController->verify($requestHeaders);
-
-
         $model = new ItemModel($mysqli);
         $controller = new ItemController($model);
         
@@ -82,22 +76,24 @@ try {
             
         } elseif ($method == 'GET' && !empty($id)) {
             $data = $controller->getOne($id);
-            
+
+        } elseif ($method == 'GET' && !empty($filters['search'])) {
+            $search = $filters['search'];
+            $data = $controller->searchItems($search);
+           
         } elseif ($method == 'GET' && $hasFilters) {
             $data = $controller->getAllWithFilters($filters);
-            
+        
         } elseif ($method == 'GET') {
             $data = $controller->getAll();
             
         } elseif ($method == 'PUT' && !empty($id)) {
             $userController->isAdmin($requestHeaders);
             $data = $controller->update($id, $requestJSON);
-            
+
         } elseif ($method == 'DELETE' && !empty($id)) {
-            // $controller->delete($id);
-            // TODO: Remove this after implementing it
-            // $userController->isAdmin($requestHeaders);
-            throw new Exception('Handler for DELETE method has NOT been implemented yet!', 501); // 501: Not Implemented!
+            $controller->deleteItem($id);
+            $userController->isAdmin($requestHeaders);
         }
         
         break;
@@ -108,8 +104,24 @@ try {
         
         if ($method == 'GET' && empty($id)) {
             $data = $controller->getAll();
+
+        // Unable to get updateCategory to work. -- JM
+        //
+        // } elseif ($method == 'POST' && !empty($id)) {
+        //     $userController->isAdmin($requestHeaders);
+        //     $data = $controller->updateCategory($requestJSON);
+
+        } elseif ($method == 'POST' && !empty($id) && $subresource == 'image') {
+            $data = $controller->upload($id, $_FILES['new_item_image']);
+            
+        } elseif ($method == 'POST') {
+            $userController->isAdmin($requestHeaders);
+            $data = $controller->createCategory($requestJSON);
+
+        } elseif ($method == 'DELETE' && !empty($id)) {
+            $controller->deleteCategory($id);
+            $userController->isAdmin($requestHeaders);
         }
-        
         break;
 
         case 'users':
@@ -118,14 +130,12 @@ try {
         }
         break;
 
-
         case 'login':
         if ($method == 'POST') {
             $data = $userController->login($requestJSON);   
         }
         break;        
 
-        // This endpoint is only available to logged-in users.
         case 'cart':
 
         $user = $userController->getUserByToken($requestHeaders);
@@ -157,8 +167,6 @@ try {
 
         if ($method == 'POST') {
 
-            // TODO: The rest of the payment code should go here.
-
             $cart = $cart_controller->getCart($user->id);
             $order = $order_controller->newOrder($user->id, $cart);
             $order_controller->createOrderItems($order->id, $cart);
@@ -178,7 +186,7 @@ try {
         $order_controller = new OrderController($order_model);
 
         if ($method == 'GET' ) {
-            $data = $controller->getAll();
+            $data = $order_controller->getAllOrders($user->id);
         }
 
         break;

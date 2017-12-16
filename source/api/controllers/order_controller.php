@@ -27,8 +27,15 @@ class OrderController
 
     }
 
-    public function getAll() {
-        return $this->model->getAll();
-    }
+    public function getAllOrders($userId) {
 
+        $orders = $this->model->getAllOrders($userId);
+
+        if (!$userId) {
+            throw new Exception('Must be logged in. ', 400);
+        }
+
+        return $this->model->getAllOrders($userId);
+    }
+    
 }
